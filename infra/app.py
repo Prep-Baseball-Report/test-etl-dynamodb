@@ -21,7 +21,7 @@ from stacks.core_stack import DynamoDBTableCreationCoreStack
 app = cdk.App()
 # Get context variables
 app_name =  'test-pbr-dynamodb-table-creation'
-environment = 'dev'#app.node.try_get_context("environment")
+environment = app.node.try_get_context("environment")
 #manifest = app.node.try_get_context("manifest")
 # if not manifest:
 #     raise Exception("Please provide a manifest yaml file, or * to update all manifests.")
