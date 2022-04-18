@@ -1,0 +1,48 @@
+name: Deploy Pipeline for athena-etl-orchestrator
+on: 
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  deploy-cdk-app:
+    runs-on: ubuntu-latest
+    env:
+      CLOUD_FORMATION_ROLE: arn:aws:iam::807324965916:role/cdk-hnb659fds-cfn-exec-role-807324965916-us-east-1
+    steps:
+      - name: Set Environment
+        id: setenv
+        run: |
+          echo "Running on branch ${{ github.ref }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "::set-output name=env_name::prod"
+          else
+             echo "::set-output name=env_name::dev"
+          fi    
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::807324965916:role/cdk-hnb659fds-deploy-role-807324965916-us-east-1
+          role-duration-seconds: 2300
+      - name: Install npm
+        run: 'sudo apt update -y && sudo apt install nodejs npm -y'
+      - name: Install AWS CDK
+        run: 'sudo npm install -g aws-cdk'
+      - name: Install Requirements
+        run: 'pip3 install -r requirements.txt'
+        working-directory: infra
+      - name: CDK Synth
+        run: cdk synth "*" -c environment=${{steps.setenv.outputs.env_name}} -c manifest='*' --require-approval never -r ${{env.CLOUD_FORMATION_ROLE}}
+        working-directory: infra
+      - name: CDK Deploy
+        run: cdk deploy "*" -c environment=${{steps.setenv.outputs.env_name}} -c manifest='*' --require-approval never -r ${{env.CLOUD_FORMATION_ROLE}}
+        working-directory: infra
+
+          
